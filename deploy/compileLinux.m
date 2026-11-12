@@ -25,8 +25,11 @@ function buildResults = compileLinux(supportPackagesFolder, outputFolder)
     cd(fullfile(repoRootFolder, 'deploy'))
     preCompile()
 
+    % Do "ai_models" (raiz do repositório) só entram o modelo .mat e as
+    % camadas geradas pelo importador ONNX; os arquivos .onnx ficam de fora.
+    aiModelsFiles   = fullfile(repoRootFolder, 'ai_models', {'pmrd2_4.mat', '+pmrd2_4'});
     additionalFiles = [fullfile(sourceFolder, {'+auxApp', '+class', '+model', '+plot', '+reportLibConnection', '+util', 'resources'}), ...
-                       supportPackagesSubfolders];
+                       aiModelsFiles, supportPackagesSubfolders];
     appVersion      = char(regexp(class.Constants.appVersion, '^(?:alpha|beta)?_?(\d+(?:\.\d+){2})', 'tokens', 'once'));
 
     cd(sourceFolder)
