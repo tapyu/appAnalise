@@ -25,9 +25,10 @@ function buildResults = compileLinux(supportPackagesFolder, outputFolder)
     cd(fullfile(repoRootFolder, 'deploy'))
     preCompile()
 
-    % Do "ai_models" (raiz do repositório) só entram o modelo .mat e as
-    % camadas geradas pelo importador ONNX; os arquivos .onnx ficam de fora.
-    aiModelsFiles   = fullfile(repoRootFolder, 'ai_models', {'pmrd2_4.mat', '+pmrd2_4'});
+    % Do "ai_models" (raiz do repositório) só entram os modelos SpecDet
+    % registrados em "specdet_models.json": parâmetros (.json), rede (.mat)
+    % e camadas geradas pelo importador ONNX; os arquivos .onnx ficam de fora.
+    aiModelsFiles   = specDetModelFiles(fullfile(repoRootFolder, 'ai_models'));
     additionalFiles = [fullfile(sourceFolder, {'+auxApp', '+class', '+model', '+plot', '+reportLibConnection', '+util', 'resources'}), ...
                        aiModelsFiles, supportPackagesSubfolders];
     appVersion      = char(regexp(class.Constants.appVersion, '^(?:alpha|beta)?_?(\d+(?:\.\d+){2})', 'tokens', 'once'));
@@ -45,4 +46,17 @@ function buildResults = compileLinux(supportPackagesFolder, outputFolder)
     % Equivalente ao "fileset.package" do desktop.prj.
     copyfile(fullfile(sourceFolder, 'config'), fullfile(outputFolder, 'config'), 'f')
     cd(repoRootFolder)
+end
+
+
+%-------------------------------------------------------------------------%
+function aiModelsFiles = specDetModelFiles(aiModelsFolder)
+    registryFile  = fullfile(aiModelsFolder, 'specdet_models.json');
+    aiModelsFiles = {registryFile};
+
+    registry = jsondecode(fileread(registryFile));
+    for ii = 1:numel(registry)
+        modelParams   = jsondecode(fileread(fullfile(aiModelsFolder, registry(ii).ParamsFile)));
+        aiModelsFiles = [aiModelsFiles, fullfile(aiModelsFolder, {registry(ii).ParamsFile, modelParams.MatFile, ['+' modelParams.Namespace]})]; %#ok<AGROW>
+    end
 end
