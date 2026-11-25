@@ -1246,6 +1246,7 @@ classdef winPlayback_exported < matlab.apps.AppBase
         %-----------------------------------------------------------------%
         function updateEmissionsPlot(app)
             delete(findobj(app.UIAxes1, 'Tag', 'emissions', '-or', 'Tag', 'emissionsTemp', '-or', 'Tag', 'emissionSelected'))
+            util.Detection.drawSpecDetBox(app.UIAxes3, app.bandObj, [])
             app.emissionSelectedHash = '';
 
             specData = app.bandObj.SpecData;
@@ -1267,6 +1268,7 @@ classdef winPlayback_exported < matlab.apps.AppBase
 
             app.plotHandles.clearWrite.MarkerIndices = emissions.FrequencyIdx;
             emissionSelectedHandle = plot.Emissions.draw(emissionSelectedIdx, app.UIAxes1, app.restoreView, app.bandObj);
+            updateSpecDetBoxPlot(app)
 
             addlistener(emissionSelectedHandle, 'MovingROI', @(~, evt)emissionROI(evt));
             addlistener(emissionSelectedHandle, 'ROIMoved',  @(~, evt)emissionROI(evt));
@@ -1287,6 +1289,7 @@ classdef winPlayback_exported < matlab.apps.AppBase
 
                         app.FlowEmissions.Data(emissionSelectedIdx, {'Frequency', 'BandWidthkHz'}) = {freqCenter, bandWidthkHz};                        
                         app.plotHandles.clearWrite.MarkerIndices(emissionSelectedIdx) = freq2idx(app.bandObj, freqCenter*1e+6);
+                        util.Detection.moveSpecDetBox(app.UIAxes3, freqCenter, bandWidthkHz)
                         
                     case 'ROIMoved'
                         plot.axes.Interactivity.DefaultEnable([app.UIAxes1, app.UIAxes2, app.UIAxes3])
@@ -1298,6 +1301,21 @@ classdef winPlayback_exported < matlab.apps.AppBase
                         updateEmissionTable(app, specData, 'Edit', emissionSelectedIdx, 'Frequency|BandWidth', frequencyIdx, freqCenter, bandWidthkHz, app.mainApp.channelObj)
                 end
             end
+        end
+
+        %-----------------------------------------------------------------%
+        function updateSpecDetBoxPlot(app)
+            % Retângulo, no waterfall, da emissão selecionada quando detectada
+            % pelo SpecDet, sincronizado com a emissão no gráfico do espectro.
+            emissionSelectedIdx = [];
+            specData = app.bandObj.SpecData;
+            if ~isempty(specData) && ~isempty(specData.UserData.Emissions)
+                selectedRow = app.FlowEmissions.UserData.selectedRow;
+                if isscalar(selectedRow) && selectedRow >= 1 && selectedRow <= height(specData.UserData.Emissions)
+                    emissionSelectedIdx = selectedRow;
+                end
+            end
+            util.Detection.drawSpecDetBox(app.UIAxes3, app.bandObj, emissionSelectedIdx)
         end
 
         %-----------------------------------------------------------------%
@@ -1419,6 +1437,7 @@ classdef winPlayback_exported < matlab.apps.AppBase
             [app.plotHandles.waterfall, app.WaterfallDecimationValue.Text] = plot.Waterfall('Creation', app.plotHandles.waterfall, app.UIAxes3, app.bandObj);
             plot.axes.Layout.YLabel(app.plotHandles.waterfall, app.axesTool_waterfall.UserData.status)
             updateWaterfallPanel(app)
+            updateSpecDetBoxPlot(app)
 
             % Timeline
             if app.mainApp.General.context.PLAYBACK.waterfallTimeVisibility
